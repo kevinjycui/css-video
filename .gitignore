@@ -4,5 +4,8 @@ frames
 
 *.log
 
-index.html
-style.css
+*index.html
+*style.css
+
+!example/*/index.html
+!example/*/style.css

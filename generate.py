@@ -14,6 +14,7 @@ VARIATION = 50
 SIDELENGTH = 100
 FPS = 20
 DELAY = 15
+BW_OPTIM = False # Turn on options to optimise for the Bad Apple!! PV specifically
 
 def parse_args(argv):
     RUNCODE, SOURCE = 0, None
@@ -43,11 +44,23 @@ def parse_args(argv):
 def approx(px1, px2, var):
     return abs(px1[0] - px2[0]) <= var and abs(px1[1] - px2[1]) <= var and abs(px1[2] - px2[2]) <= var
 
-def get_polygons(filename, variation=VARIATION):
-    im = Image.open(filename)
-    rgb_im = im.convert('RGB')
+def reduct(px): # Reduces colours to white, grey, black to optimise for the Bad Apple!! PV
+    if px[0] < 100 and px[1] < 100 and px[2] < 100:
+        return (0, 0, 0)
+    elif px[0] > 155 and px[1] > 155 and px[2] > 155:
+        return (255, 255, 255)
+    return (125, 125, 125)
 
+def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
+    im = Image.open(filename)
     width, height = im.size
+
+    if bw_optim:
+        for i in range(width):
+            for j in range(height):
+                im.putpixel((i, j), reduct(im.getpixel((i, j))))
+
+    rgb_im = im.convert('RGB')
 
     polygons = []
 
@@ -60,6 +73,8 @@ def get_polygons(filename, variation=VARIATION):
         for j in range(height):
             if not visited[i][j]:
                 colour = rgb_im.getpixel((i, j))
+                avg_colour = [colour[0], colour[1], colour[2], 1]
+
                 arr_seg = np.zeros((height, width), np.float32)
                 arr_seg.fill(255)
 
@@ -70,6 +85,11 @@ def get_polygons(filename, variation=VARIATION):
 
                 while len(queue) > 0:
                     x, y = queue.pop()
+                    curr_colour = rgb_im.getpixel((x, y))
+                    for rgb in range(3):
+                        avg_colour[rgb] += curr_colour[rgb]
+                    avg_colour[3] += 1
+
                     pixels += 1
         
                     if x-1 >= 0:
@@ -96,7 +116,7 @@ def get_polygons(filename, variation=VARIATION):
                             visited[x][y+1] = True
                             queue.append((x, y+1))
 
-                if pixels >= 6:
+                if pixels >= (6 if not bw_optim else 20):
                     rgb_im_seg = Image.fromarray(arr_seg).convert('RGB')
                     im_seg = cv2.cvtColor(np.array(rgb_im_seg), cv2.COLOR_RGB2BGR)
 
@@ -111,6 +131,8 @@ def get_polygons(filename, variation=VARIATION):
 
                     # cv2.destroyAllWindows()
 
+                    final_colour = (avg_colour[0]/avg_colour[3], avg_colour[1]/avg_colour[3], avg_colour[2]/avg_colour[3])
+
                     for contour in contours:
                         lst = contour.tolist()
 
@@ -118,7 +140,7 @@ def get_polygons(filename, variation=VARIATION):
                         for point in lst:
                             points.append(('%2f%%' % (100*point[0][0]/width), '%2f%%' % (100*point[0][1]/height)))
 
-                        polygons.append((points, colour))
+                        polygons.append((points, final_colour))
 
     return polygons
 
@@ -156,10 +178,10 @@ def write_polygons_image(filename):
         tag['class'] = 'component ' + class_name
         soup.body.append(tag)
 
-    with open('example/index.html', 'w+') as f:
+    with open('index.html', 'w+') as f:
         f.write(str(soup))
 
-    with open('example/style.css', 'w+') as f:
+    with open('style.css', 'w+') as f:
         f.write(sheet.cssText.decode('ascii'))
 
 def write_polygons_video(dirname):
