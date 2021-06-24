@@ -4,8 +4,5 @@ frames
 
 *.log
 
-*index.html
-*style.css
-
-!example/**/**/index.html
-!example/**/**/style.css
+result/*
+!result/.gitkeep

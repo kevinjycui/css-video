@@ -149,8 +149,7 @@ doc = '''
     <html lang="en-US">
         <head>
             <meta charset="UTF-8">
-            <meta name="author" content="Junferno">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta content="Junferno" name="author"/>
             <title>CSS Video by Junferno</title>
             <link rel="stylesheet" href="style.css">
         </head>
@@ -178,10 +177,10 @@ def write_polygons_image(filename):
         tag['class'] = 'component ' + class_name
         soup.body.append(tag)
 
-    with open('index.html', 'w+') as f:
+    with open('result/index.html', 'w+') as f:
         f.write(str(soup))
 
-    with open('style.css', 'w+') as f:
+    with open('result/style.css', 'w+') as f:
         f.write(sheet.cssText.decode('ascii'))
 
 def write_polygons_video(dirname):
@@ -245,10 +244,10 @@ def write_polygons_video(dirname):
         keyframe_css += '100% {clip-path: polygon(0% 0%)}}'
         sheet.add(keyframe_css)
 
-    with open('index.html', 'w+') as f:
+    with open('result/index.html', 'w+') as f:
         f.write(str(soup))
 
-    with open('style.css', 'w+') as f:
+    with open('result/style.css', 'w+') as f:
         f.write(sheet.cssText.decode('ascii'))
 
 if __name__ == '__main__':
