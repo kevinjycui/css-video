@@ -7,5 +7,5 @@ frames
 *index.html
 *style.css
 
-!example/*/index.html
-!example/*/style.css
+!example/**/**/index.html
+!example/**/**/style.css
