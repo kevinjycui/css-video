@@ -15,6 +15,8 @@ SIDELENGTH = 100
 FPS = 20
 DELAY = 15
 BW_OPTIM = False # Turn on options to optimise for the Bad Apple!! PV specifically
+LOWER_CUT = 10 # Default 6, lowest number of pixels per polygon
+
 
 def parse_args(argv):
     RUNCODE, SOURCE = 0, None
@@ -85,7 +87,7 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
 
                 while len(queue) > 0:
                     x, y = queue.pop()
-                    curr_colour = rgb_im.getpixel((x, y))
+                    curr_colour = rgb_im.getpixel((x, y)) # Not optimal way to access all pixels of image; TODO: optimise
                     for rgb in range(3):
                         avg_colour[rgb] += curr_colour[rgb]
                     avg_colour[3] += 1
@@ -116,7 +118,7 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
                             visited[x][y+1] = True
                             queue.append((x, y+1))
 
-                if pixels >= (6 if not bw_optim else 20):
+                if pixels >= (LOWER_CUT if not bw_optim else 20):
                     rgb_im_seg = Image.fromarray(arr_seg).convert('RGB')
                     im_seg = cv2.cvtColor(np.array(rgb_im_seg), cv2.COLOR_RGB2BGR)
 
