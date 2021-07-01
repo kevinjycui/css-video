@@ -1,8 +1,16 @@
 env
-test
-frames
+
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.mov
+
+!example/**
 
 *.log
 
 result/*
 !result/.gitkeep
+
+tmp*

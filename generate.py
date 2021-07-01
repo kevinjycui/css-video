@@ -14,14 +14,17 @@ VARIATION = 50
 SIDELENGTH = 100
 FPS = 20
 DELAY = 15
-BW_OPTIM = False # Turn on options to optimise for the Bad Apple!! PV specifically
-LOWER_CUT = 10 # Default 6, lowest number of pixels per polygon
+LOWER_CUT = 6 # Lowest number of pixels per polygon for video
+OUTPUT_DIR = 'result'
+BA_OPTIM = False # Optimise for Bad Apple!!
 
 
 def parse_args(argv):
+    global VARIATION, SIDELENGTH, FPS, DELAY, LOWER_CUT, OUTPUT_DIR, BA_OPTIM
+
     RUNCODE, SOURCE = 0, None
     try:
-        opts, args = getopt.getopt(argv, 'hi:f:', ['image=', 'frames='])
+        opts, args = getopt.getopt(argv, 'hbi:f:d:o:', ['image=', 'frames=', 'variation=', 'sidelength=', 'fps=', 'delay=', 'lowercut=', 'output='])
     except getopt.GetoptError:
         print('Invalid arguments:\ngenerate.py -i <image>\ngenerate.py -f <frames>')
         sys.exit(2)
@@ -40,7 +43,25 @@ def parse_args(argv):
                 print('Invalid arguments: Must be strictly image or frames, cannot be both')
                 sys.exit(2)
             RUNCODE = 2
-            SOURCE = arg
+            SOURCE = arg.rstrip('/')
+        elif opt in ('--variation'):
+            VARIATION = int(arg)
+        elif opt in ('--sidelength'):
+            SIDELENGTH = int(arg)
+        elif opt in ('--fps'):
+            FPS = int(arg)
+        elif opt in ('-d', '--delay'):
+            DELAY = int(arg)
+        elif opt in ('--lowercut'):
+            LOWER_CUT = int(arg)
+        elif opt in ('-o', '--output'):
+            OUTPUT_DIR = arg.rstrip('/')
+        elif opt in ('-b'):
+            BA_OPTIM = True
+        else:
+            print('Invalid argument:', opt, arg)
+    print('Running with arguments:\nVariation: %d\nSidelength: %dpx\nFPS: %dfps\nDelay: %ds\nLower cut: %d\nOutput directory: %s\nBad Apple optimised: %s' % \
+     (VARIATION, SIDELENGTH, FPS, DELAY, LOWER_CUT, OUTPUT_DIR, BA_OPTIM))
     return RUNCODE, SOURCE
 
 def approx(px1, px2, var):
@@ -53,16 +74,19 @@ def reduct(px): # Reduces colours to white, grey, black to optimise for the Bad 
         return (255, 255, 255)
     return (125, 125, 125)
 
-def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
+def get_polygons(filename, variation=VARIATION):
     im = Image.open(filename)
     width, height = im.size
 
-    if bw_optim:
-        for i in range(width):
-            for j in range(height):
-                im.putpixel((i, j), reduct(im.getpixel((i, j))))
-
     rgb_im = im.convert('RGB')
+    im_arr = list(rgb_im.getdata())
+
+    def getpixel(x, y):
+        return im_arr[y * width + x]
+
+    if BA_OPTIM:
+        for i in range(len(im_arr)):
+            im_arr[i] = reduct(im_arr[i])
 
     polygons = []
 
@@ -74,7 +98,8 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
     for i in range(width):
         for j in range(height):
             if not visited[i][j]:
-                colour = rgb_im.getpixel((i, j))
+                colour = getpixel(i, j)
+
                 avg_colour = [colour[0], colour[1], colour[2], 1]
 
                 arr_seg = np.zeros((height, width), np.float32)
@@ -87,7 +112,7 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
 
                 while len(queue) > 0:
                     x, y = queue.pop()
-                    curr_colour = rgb_im.getpixel((x, y)) # Not optimal way to access all pixels of image; TODO: optimise
+                    curr_colour = getpixel(x, y)
                     for rgb in range(3):
                         avg_colour[rgb] += curr_colour[rgb]
                     avg_colour[3] += 1
@@ -96,29 +121,29 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
         
                     if x-1 >= 0:
                         arr_seg[y,x-1] = 0
-                        if not visited[x-1][y] and approx(rgb_im.getpixel((x-1, y)), colour, variation):
+                        if not visited[x-1][y] and approx(getpixel(x-1, y), colour, variation):
                             visited[x-1][y] = True
                             queue.append((x-1, y))
         
                     if x+1 < width:
                         arr_seg[y,x+1] = 0
-                        if not visited[x+1][y] and approx(rgb_im.getpixel((x+1, y)), colour, variation):
+                        if not visited[x+1][y] and approx(getpixel(x+1, y), colour, variation):
                             visited[x+1][y] = True
                             queue.append((x+1, y))
         
                     if y-1 >= 0:
                         arr_seg[y-1,x] = 0
-                        if not visited[x][y-1] and approx(rgb_im.getpixel((x, y-1)), colour, variation):
+                        if not visited[x][y-1] and approx(getpixel(x, y-1), colour, variation):
                             visited[x][y-1] = True
                             queue.append((x, y-1))
         
                     if y+1 < height:
                         arr_seg[y+1,x] = 0
-                        if not visited[x][y+1] and approx(rgb_im.getpixel((x, y+1)), colour, variation):
+                        if not visited[x][y+1] and approx(getpixel(x, y+1), colour, variation):
                             visited[x][y+1] = True
                             queue.append((x, y+1))
 
-                if pixels >= (LOWER_CUT if not bw_optim else 20):
+                if pixels >= LOWER_CUT:
                     rgb_im_seg = Image.fromarray(arr_seg).convert('RGB')
                     im_seg = cv2.cvtColor(np.array(rgb_im_seg), cv2.COLOR_RGB2BGR)
 
@@ -133,7 +158,7 @@ def get_polygons(filename, variation=VARIATION, bw_optim=BW_OPTIM):
 
                     # cv2.destroyAllWindows()
 
-                    final_colour = (avg_colour[0]/avg_colour[3], avg_colour[1]/avg_colour[3], avg_colour[2]/avg_colour[3])
+                    final_colour = (avg_colour[0]//avg_colour[3], avg_colour[1]//avg_colour[3], avg_colour[2]//avg_colour[3])
 
                     for contour in contours:
                         lst = contour.tolist()
@@ -179,10 +204,10 @@ def write_polygons_image(filename):
         tag['class'] = 'component ' + class_name
         soup.body.append(tag)
 
-    with open('result/index.html', 'w+') as f:
+    with open(OUTPUT_DIR + '/index.html', 'w+') as f:
         f.write(str(soup))
 
-    with open('result/style.css', 'w+') as f:
+    with open(OUTPUT_DIR + '/style.css', 'w+') as f:
         f.write(sheet.cssText.decode('ascii'))
 
 def write_polygons_video(dirname):
@@ -216,7 +241,7 @@ def write_polygons_video(dirname):
         
         for i, polygon in enumerate(polygons):
             points, colour = polygon
-            keyframes[i].append((round(100 * (index/frames), 2), ','.join([x + ' ' + y for x, y in points]), ','.join(list(map(str, colour)))))
+            keyframes[i].append((max(0, round(100 * ((index-1)/frames) + 0.01, 2)), round(100 * (index/frames), 2), ','.join([x + ' ' + y for x, y in points]), ','.join(list(map(str, colour)))))
 
         for i in range(len(polygons), len(keyframes)):
             keyframes[i].append((round(100 * (index/frames), 2),))
@@ -233,11 +258,11 @@ def write_polygons_video(dirname):
         hidden = False
 
         for component in keyframes[i]:
-            if len(component) == 3:
+            if len(component) == 4:
                 keyframe_css += empty_keyframe
                 empty_keyframe = ''
                 hidden = False
-                keyframe_css += '%.2f%% {clip-path: polygon(%s); background-color: rgb(%s)}' % component
+                keyframe_css += '%.2f%%, %.2f%% {clip-path: polygon(%s); background-color: rgb(%s)}' % component
             elif not hidden:
                 keyframe_css += '%.2f%% {clip-path: polygon(0%% 0%%)}' % component[0]
                 hidden = True
@@ -246,13 +271,19 @@ def write_polygons_video(dirname):
         keyframe_css += '100% {clip-path: polygon(0% 0%)}}'
         sheet.add(keyframe_css)
 
-    with open('result/index.html', 'w+') as f:
+    with open(OUTPUT_DIR + '/index.html', 'w+') as f:
         f.write(str(soup))
 
-    with open('result/style.css', 'w+') as f:
+    with open(OUTPUT_DIR + '/style.css', 'w+') as f:
         f.write(sheet.cssText.decode('ascii'))
 
 if __name__ == '__main__':
+    print('CSS Video Converter')
+    print('Junferno 2021')
+    print('https://github.com/kevinjycui/css-video')
+
+    print('-----------------------------')
+    
     RUNCODE, SOURCE = parse_args(sys.argv[1:])
     if RUNCODE == 1:
         write_polygons_image(SOURCE)
