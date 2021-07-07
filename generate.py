@@ -169,7 +169,7 @@ def get_polygons(filename, variation=VARIATION):
 
                         polygons.append((points, final_colour))
 
-    return polygons
+    return polygons, width, height
 
 doc = '''
     <!DOCTYPE html>
@@ -187,12 +187,12 @@ doc = '''
 def write_polygons_image(filename):
     global doc
 
-    polygons = get_polygons(filename)
+    polygons, width, height = get_polygons(filename)
 
     sheet = cssutils.css.CSSStyleSheet()
 
     soup = bs.BeautifulSoup(doc, 'html.parser')
-    sheet.add('.component {width: %dvw; height: %dvw; position: absolute}' % (SIDELENGTH, SIDELENGTH))
+    sheet.add('.component {width: %dvw; height: %dvw; position: absolute}' % (SIDELENGTH, int(SIDELENGTH * (height/width))))
 
     for i, polygon in enumerate(polygons):
         points, colour = polygon
@@ -218,12 +218,13 @@ def write_polygons_video(dirname):
     soup = bs.BeautifulSoup(doc, 'html.parser')
     frames = len(os.listdir(dirname))
 
-    sheet.add('.component {width: %dvw; height: %dvw; position: absolute; animation-duration: %.2fs; animation-delay: %.2fs}' % (SIDELENGTH, SIDELENGTH, frames/FPS, DELAY))
-
     keyframes = []
 
     for index in range(frames):
-        polygons = get_polygons(dirname + '/frame%d.png' % (index + 1))
+        polygons, width, height = get_polygons(dirname + '/frame%d.png' % (index + 1))
+
+        if index == 0:
+            sheet.add('.component {width: %dvw; height: %dvw; position: absolute; animation-duration: %.2fs; animation-delay: %.2fs}' % (SIDELENGTH, int(SIDELENGTH * (height/width)), frames/FPS, DELAY))
 
         prev_len = len(keyframes)
 
