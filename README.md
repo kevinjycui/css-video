@@ -11,6 +11,7 @@ https://kevinjycui.github.io/css-video/
 
 ## Tested on
  * [<img src='https://www.google.com/chrome/static/images/favicons/favicon-32x32.png' width='16px'/> Google Chrome](https://www.google.com/chrome/index.html)
+ * [<img src='https://microsoftedgewelcome.microsoft.com/v3/favicon.png' width='16px'/> Microsoft Edge](https://microsoftedgewelcome.microsoft.com/en-us)
  * [<img src='https://www.mozilla.org/media/img/favicons/firefox/browser/favicon.f093404c0135.ico' width='16px'/> Mozilla Firefox](https://www.mozilla.org/en-US/firefox/new/)
  * [<img src='https://brave.com/static-assets/images/brave-favicon.png' width='16px'/> Brave](https://brave.com/)
 
