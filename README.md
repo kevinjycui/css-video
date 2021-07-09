@@ -57,3 +57,5 @@ Video
 ## References
  * [YouTube: The Art of Pure CSS](https://youtu.be/wUQbchYY80U)
  * [YouTube: Bad Apple!! played with pure CSS in high quality](https://youtu.be/MQbjW2VfaHs)
+ * [Niconico: CSS だけで高画質の【Bad Apple!!】を再生してみた](https://www.nicovideo.jp/watch/sm39007729)
+ * [Bilibili: 使用纯CSS来播放【Bad Apple!!】](https://www.bilibili.com/video/BV1Zg411u7xk/)
